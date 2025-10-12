@@ -20,6 +20,7 @@ For Windows/MacOS, I don't know, Google it yourself, please.
 ## Controls
 Use your mouse (move + click) or your arrow keys (+ enter) to choose an emoji to paste.
 Use the arrow keys or your mouse wheel to scroll. You can also press and drag to scroll.
+You can type to filter the shown emojis. Your typed text replaces the window title.
 
 Use F1 to toggle between light and dark mode. If you select light mode, there is a file called UseLightTheme.txt.
 
