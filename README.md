@@ -1,11 +1,12 @@
 # Emoji Launcher
 
-Emoji Picker for Linux and Windows.
-Getting it to work for MacOS would be trivial, too, but I have no system to test it (just add the LWJGL libraries).
+Lightweight Emoji Picker for Linux, Windows and MacOS.
 
 ![Screenshot.png](promo/Screenshot.png)
 
-This project was developed for Ubuntu.
+This project was developed for Ubuntu, and should work on any device supporting OpenGL 3.3.
 
 The emojis are from [Twemoji](https://github.com/twitter/twemoji),
 and the names for filtering have been taken from [Unicode.com](https://unicode.org/Public/emoji/latest/).
+
+Used libraries: LWJGL (GLFW + OpenGL).
