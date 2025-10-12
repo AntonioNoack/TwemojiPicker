@@ -1,4 +1,4 @@
-# Emoji Launcher
+# Twemoji Picker
 
 Lightweight Emoji Picker for Linux, Windows and MacOS.
 
@@ -10,6 +10,8 @@ The emojis are from [Twemoji](https://github.com/twitter/twemoji),
 and the names for filtering have been taken from [Unicode.com](https://unicode.org/Public/emoji/latest/).
 
 Used libraries: LWJGL (GLFW + OpenGL).
+
+Using the script in me/anno/emojipicker/utils, you can also convert your own emoji packs, and pick from them instead.
 
 ## Install
 This application only is the launcher itself. It doesn't launch itself.
