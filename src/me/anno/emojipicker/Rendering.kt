@@ -1,9 +1,15 @@
 package me.anno.emojipicker
 
 import me.anno.emojipicker.Window.isDarkTheme
+import me.anno.emojipicker.Window.keyboardSelectedX
+import me.anno.emojipicker.Window.keyboardSelectedY
 import me.anno.emojipicker.Window.mouseX
 import me.anno.emojipicker.Window.mouseY
+import me.anno.emojipicker.Window.numX
+import me.anno.emojipicker.Window.numY
 import me.anno.emojipicker.Window.scroll
+import me.anno.emojipicker.Window.shownEmojiIds
+import me.anno.emojipicker.gfx.FlatColorShader
 import me.anno.emojipicker.gfx.Quad
 import me.anno.emojipicker.gfx.TextureColorShader
 import org.lwjgl.glfw.GLFW.*
@@ -18,6 +24,11 @@ import kotlin.math.min
 
 object Rendering {
 
+    class Color(val r: Float, val g: Float, val b: Float)
+
+    val bright = Color(0.9f, 0.9f, 0.9f)
+    val dark = Color(0.1f, 0.1f, 0.15f)
+
     val padding = 2
     var hasLoadedTexture = false
     var lastFilter = "x"
@@ -25,6 +36,7 @@ object Rendering {
     fun renderWindow(window: Long) {
 
         val texShader = TextureColorShader()
+        val flatShader = FlatColorShader()
         val quad = Quad()
 
         val widthI = IntArray(1)
@@ -40,11 +52,8 @@ object Rendering {
             glBindFramebuffer(GL_FRAMEBUFFER, 0)
             glViewport(0, 0, width, height)
 
-            if (isDarkTheme) {
-                glClearColor(0.1f, 0.1f, 0.15f, 1f)
-            } else {
-                glClearColor(0.9f, 0.9f, 0.9f, 1f)
-            }
+            val bgColor = if (isDarkTheme) dark else bright
+            glClearColor(bgColor.r, bgColor.g, bgColor.b, 1f)
             glClear(GL_COLOR_BUFFER_BIT)
 
             glEnable(GL_BLEND)
@@ -75,8 +84,8 @@ object Rendering {
                 val numX = (width - padding) / (emojiSize + padding)
                 val numY = (Window.shownEmojiIds.size + numX - 1) / numX
                 Window.numX = numX
-                Window.selectedEmojiX = clamp(Window.selectedEmojiX, 0, numX - 1)
-                Window.selectedEmojiY = clamp(Window.selectedEmojiY, 0, numY - 1)
+                Window.numY = numY
+                clampSelection()
 
                 // val usedMemory = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()
                 // println("%.1f MiB".format((usedMemory / (1024f * 1024f))))
@@ -95,7 +104,6 @@ object Rendering {
                 texShader.use()
                 glActiveTexture(texShader.texture)
                 glBindTexture(GL_TEXTURE_2D, tex.pointer)
-                glUniform4f(texShader.color, 1f, 1f, 1f, 1f)
 
                 gfxCheck()
 
@@ -104,10 +112,9 @@ object Rendering {
 
                 val centerX = (width - (numX * (emojiSize + padding) + padding)) / 2
 
-                var wasSelected = false
-
-                val hoveredX = floor((mouseX - centerX).toFloat() / (emojiSize + padding)).toInt()
-                val hoveredY = ((mouseY - padding + scroll) / (emojiSize + padding)).toInt()
+                val mouseHoveredX = floor((mouseX - centerX).toFloat() / (emojiSize + padding)).toInt()
+                val mouseHoveredY = ((mouseY - padding + scroll) / (emojiSize + padding)).toInt()
+                val isHovering = Window.movedSinceKeyboardKeys > 10f
 
                 for (y in y0 until y1) {
                     for (x in 0 until numX) {
@@ -115,24 +122,10 @@ object Rendering {
                         gfxCheck()
 
                         val i = x + y * numX
-                        val emojiId = Window.shownEmojiIds.getOrNull(i) ?: continue
+                        val emojiId = shownEmojiIds.getOrNull(i) ?: continue
 
                         val emojiX = emojiId % srcNumX
                         val emojiY = emojiId / srcNumX
-
-                        // show selected emoji
-                        val isHovered = x == hoveredX && y == hoveredY
-                        val isSelected = (x == Window.selectedEmojiX && y == Window.selectedEmojiY) || isHovered
-                        if (wasSelected != isSelected) {
-                            val color = if (isSelected) 0.7f else 1f
-                            glUniform4f(texShader.color, color, color, color, 1f)
-                            wasSelected = isSelected
-                        }
-                        if (isHovered) {
-                            Window.hoveredEmoji = emojiId
-                        }
-
-                        glUniform4f(texShader.select, dx, dy, dx * emojiX, dy * emojiY)
 
                         val dxi = emojiSize * ppix
                         val dyi = emojiSize * ppiy
@@ -140,6 +133,39 @@ object Rendering {
                         val posY = (y * (emojiSize + padding) + padding - scroll)
                         val x0f = -1f + ppix * posX
                         val y0f = +1f - dyi - ppiy * posY
+
+                        // show selected emoji
+                        val isMouseHovered = x == mouseHoveredX && y == mouseHoveredY
+                        val isKeyboardSelected = x == keyboardSelectedX && y == keyboardSelectedY
+                        if (if (isHovering) isMouseHovered else isKeyboardSelected) {
+                            // show border around hovered/selected element
+                            flatShader.use()
+
+                            val invColor = if (isDarkTheme) bright else dark
+                            glUniform4f(flatShader.color, invColor.r, invColor.g, invColor.b, 1f)
+                            glUniform4f(
+                                flatShader.bounds,
+                                dxi + 2f * padding * ppix, dyi + 2f * padding * ppiy,
+                                x0f - padding * ppix, y0f - padding * ppiy
+                            )
+                            drawQuad()
+
+                            glUniform4f(flatShader.color, bgColor.r, bgColor.g, bgColor.b, 1f)
+                            glUniform4f(flatShader.bounds, dxi, dyi, x0f, y0f)
+                            drawQuad()
+
+                            texShader.use()
+                        }
+                        if (isMouseHovered && isHovering) {
+                            keyboardSelectedX = x
+                            keyboardSelectedY = y
+                            if (Window.hoveredEmoji != emojiId) {
+                                Window.hoveredEmoji = emojiId
+                                glfwSetWindowTitle(window, Emojis.getDesc(emojiId))
+                            }
+                        }
+
+                        glUniform4f(texShader.select, dx, dy, dx * emojiX, dy * emojiY)
                         glUniform4f(texShader.bounds, dxi, dyi, x0f, y0f)
                         drawQuad()
 
@@ -151,7 +177,6 @@ object Rendering {
 
             glFinish()
             glfwSwapBuffers(window)
-
 
         }
 
@@ -167,6 +192,7 @@ object Rendering {
     }
 
     fun gfxCheck() {
+        // enable this if you suspect OpenGL abuse
         if (false) {
             val error = glGetError()
             if (error != 0) throw IllegalStateException("Error! $error")
@@ -201,4 +227,15 @@ object Rendering {
         robot.keyRelease(KeyEvent.VK_V)
         robot.keyRelease(KeyEvent.VK_CONTROL)
     }
+
+    fun clampSelection() {
+        keyboardSelectedX = clamp(keyboardSelectedX, 0, numX - 1)
+        keyboardSelectedY = clamp(keyboardSelectedY, 0, numY - 1)
+    }
+
+    fun getSelectedEmojiId(): Int {
+        val index = keyboardSelectedX + keyboardSelectedY * numX
+        return shownEmojiIds.getOrNull(index) ?: -1
+    }
+
 }

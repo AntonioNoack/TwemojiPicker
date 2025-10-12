@@ -15,6 +15,7 @@ fun main() {
     //  search bar = typing in everything / top
     // clicking = selecting emoji, putting into paste-history, and java.awt.Robot pasting it into the program below
     // todo show recently used emojis at the top
+    // tooltip text showing which emoji is currently being selected/hovered for easier future filtering
     // hotkey to toggle dark/light theme -> F1
     thread(name = "Loading Images") {
         Emojis.images

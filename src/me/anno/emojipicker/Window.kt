@@ -1,5 +1,7 @@
 package me.anno.emojipicker
 
+import me.anno.emojipicker.Rendering.clampSelection
+import me.anno.emojipicker.Rendering.getSelectedEmojiId
 import me.anno.emojipicker.Rendering.gfxCheck
 import me.anno.emojipicker.Rendering.padding
 import me.anno.emojipicker.Rendering.pasteEmoji
@@ -26,9 +28,10 @@ object Window {
     var isDarkTheme = !lightThemeFile.exists()
 
     var shownEmojiIds = listOf(0)
-    var selectedEmojiX = 0
-    var selectedEmojiY = 0
+    var keyboardSelectedX = 0
+    var keyboardSelectedY = 0
     var numX = 10
+    var numY = 10
 
     var hoveredEmoji = 0
 
@@ -95,30 +98,44 @@ object Window {
                     else lightThemeFile.createNewFile()
                 }
                 GLFW_KEY_ENTER -> {
-                    val id = selectedEmojiX + selectedEmojiY * numX
-                    if (id in shownEmojiIds.indices) {
-                        pasteEmoji(Emojis.getName(shownEmojiIds[id]))
+                    val id = getSelectedEmojiId()
+                    if (id >= 0) {
+                        pasteEmoji(Emojis.getName(id))
                         glfwSetWindowShouldClose(window, true)
                     }
                 }
-                GLFW_KEY_LEFT -> selectedEmojiX--
-                GLFW_KEY_RIGHT -> selectedEmojiX++
-                GLFW_KEY_UP -> {
-                    selectedEmojiY--
-                    if (selectedEmojiY < y0 + 1) {
-                        scroll -= emojiSize + padding
-                    }
-                }
+                GLFW_KEY_LEFT,
+                GLFW_KEY_RIGHT,
+                GLFW_KEY_UP,
                 GLFW_KEY_DOWN -> {
-                    selectedEmojiY++
-                    if (selectedEmojiY > y1 - 2) {
-                        scroll += emojiSize + padding
+                    val prev = keyboardSelectedY
+                    when (key) {
+                        GLFW_KEY_LEFT -> {
+                            keyboardSelectedX--
+                            if (keyboardSelectedX < 0 && keyboardSelectedY > 0) {
+                                keyboardSelectedY--
+                                keyboardSelectedX += numX
+                            }
+                        }
+                        GLFW_KEY_RIGHT -> {
+                            keyboardSelectedX++
+                            if (keyboardSelectedX >= numX && keyboardSelectedY + 1 < numY) {
+                                keyboardSelectedX -= numX
+                                keyboardSelectedY++
+                            }
+                        }
+                        GLFW_KEY_UP -> keyboardSelectedY = posMod(prev - 1, numY)
+                        GLFW_KEY_DOWN -> keyboardSelectedY = posMod(prev + 1, numY)
                     }
+                    scroll = ((emojiSize + padding) * (keyboardSelectedY - (y1 - y0) * 0.5f) + padding)
+                    movedSinceKeyboardKeys = 0f
+                    updateSelectedTitle(window)
                 }
             }
         }
         glfwSetCharCallback(window) { _, char ->
             input += String(Character.toChars(char)).lowercase()
+            movedSinceKeyboardKeys = 0f
             glfwSetWindowTitle(window, input.trim().ifEmpty { WINDOW_TITLE })
         }
         glfwSetCursorPosCallback(window) { _, x, y ->
@@ -126,7 +143,9 @@ object Window {
             val yi = y.toInt()
             val dx = xi - mouseX
             val dy = yi - mouseY
-            moved += sqrt((dx * dx + dy * dy).toFloat())
+            val distance = sqrt((dx * dx + dy * dy).toFloat())
+            movedSinceLeftPress += distance
+            movedSinceKeyboardKeys += distance
             mouseX = xi
             mouseY = yi
             if (isLeftDown) {
@@ -137,17 +156,32 @@ object Window {
             if (button == GLFW_MOUSE_BUTTON_1) {
                 isLeftDown = action == GLFW_PRESS
                 val now = System.nanoTime()
-                if (!isLeftDown && moved < 10f && now - downTime < 500_000_000L) {
+                if (!isLeftDown && movedSinceLeftPress < 10f && now - downTime < 500_000_000L) {
                     // click an emoji
                     val id = hoveredEmoji
-                    if (id in 0 until Emojis.numEmojis) {
-                        pasteEmoji(Emojis.getName(shownEmojiIds[id]))
+                    if (id >= 0) {
+                        pasteEmoji(Emojis.getName(id))
                         glfwSetWindowShouldClose(window, true)
                     }
                 }
                 downTime = now
-                moved = 0f
+                movedSinceLeftPress = 0f
             }
+        }
+    }
+
+    fun updateSelectedTitle(window: Long) {
+        clampSelection()
+        val id = getSelectedEmojiId()
+        if (id >= 0) {
+            glfwSetWindowTitle(window, Emojis.getDesc(id))
+        }
+    }
+
+    fun posMod(i: Int, m: Int): Int {
+        return if (m <= 0) i else {
+            val mod = i % m
+            if (mod < 0) i + m else i
         }
     }
 
@@ -157,7 +191,8 @@ object Window {
     }
 
     var isLeftDown = false
-    var moved = 0f
+    var movedSinceLeftPress = 0f
     var downTime = 0L
+    var movedSinceKeyboardKeys = 0f
 
 }
