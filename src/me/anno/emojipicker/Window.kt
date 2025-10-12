@@ -129,6 +129,9 @@ object Window {
             moved += sqrt((dx * dx + dy * dy).toFloat())
             mouseX = xi
             mouseY = yi
+            if (isLeftDown) {
+                scroll -= dy
+            }
         }
         glfwSetMouseButtonCallback(window) { _, button, action, _ ->
             if (button == GLFW_MOUSE_BUTTON_1) {

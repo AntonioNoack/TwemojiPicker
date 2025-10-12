@@ -6,39 +6,11 @@ import me.anno.emojipicker.Window.mouseY
 import me.anno.emojipicker.Window.scroll
 import me.anno.emojipicker.gfx.Quad
 import me.anno.emojipicker.gfx.TextureColorShader
-import org.lwjgl.glfw.GLFW.glfwDestroyWindow
-import org.lwjgl.glfw.GLFW.glfwGetWindowSize
-import org.lwjgl.glfw.GLFW.glfwPollEvents
-import org.lwjgl.glfw.GLFW.glfwSwapBuffers
-import org.lwjgl.glfw.GLFW.glfwTerminate
-import org.lwjgl.glfw.GLFW.glfwWindowShouldClose
-import org.lwjgl.opengl.GL11C.GL_BLEND
-import org.lwjgl.opengl.GL11C.GL_COLOR_BUFFER_BIT
-import org.lwjgl.opengl.GL11C.GL_ONE
-import org.lwjgl.opengl.GL11C.GL_ONE_MINUS_SRC_ALPHA
-import org.lwjgl.opengl.GL11C.GL_SRC_ALPHA
-import org.lwjgl.opengl.GL11C.GL_TEXTURE_2D
-import org.lwjgl.opengl.GL11C.GL_TRIANGLE_STRIP
-import org.lwjgl.opengl.GL11C.glBindTexture
-import org.lwjgl.opengl.GL11C.glClear
-import org.lwjgl.opengl.GL11C.glClearColor
-import org.lwjgl.opengl.GL11C.glDrawArrays
-import org.lwjgl.opengl.GL11C.glEnable
-import org.lwjgl.opengl.GL11C.glFinish
-import org.lwjgl.opengl.GL11C.glGetError
-import org.lwjgl.opengl.GL11C.glViewport
-import org.lwjgl.opengl.GL13C.glActiveTexture
-import org.lwjgl.opengl.GL14C.GL_FUNC_ADD
-import org.lwjgl.opengl.GL14C.glBlendFuncSeparate
-import org.lwjgl.opengl.GL20C.glBlendEquationSeparate
-import org.lwjgl.opengl.GL20C.glUniform4f
-import org.lwjgl.opengl.GL30C.GL_FRAMEBUFFER
-import org.lwjgl.opengl.GL30C.glBindFramebuffer
-import org.lwjgl.opengl.GL30C.glBindVertexArray
+import org.lwjgl.glfw.GLFW.*
+import org.lwjgl.opengl.GL46C.*
 import java.awt.Robot
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
-import java.awt.event.InputEvent
 import java.awt.event.KeyEvent
 import kotlin.math.floor
 import kotlin.math.max
@@ -223,9 +195,6 @@ object Rendering {
     fun onFinish() {
         if (!shouldPaste) return
         val robot = Robot()
-        robot.mousePress(InputEvent.BUTTON1_DOWN_MASK)
-        Thread.sleep(10)
-        robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK)
         robot.keyPress(KeyEvent.VK_CONTROL)
         robot.keyPress(KeyEvent.VK_V)
         Thread.sleep(10)
